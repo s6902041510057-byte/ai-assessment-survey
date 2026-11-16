@@ -1,0 +1,3 @@
+# Supabase backend for centralized response collection
+
+We originally planned a client-side-only survey: responses stored in each respondent's localStorage and exported as CSV. The admin requirement — viewing all responses in one place, comparing results by room, and exporting to Excel — requires a central database, because responses scattered across individual browsers cannot be aggregated. We decided to add a backend using Supabase (Postgres) with a Next.js API layer: each submission is stored server-side, and the admin dashboard queries Supabase to display tables, comparison charts, and CSV export. This trades the simplicity of a static site for a database dependency and admin access control, which is necessary to meet the admin requirement.

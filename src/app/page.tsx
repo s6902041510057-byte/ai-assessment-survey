@@ -1,69 +1,95 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Logo } from "@/components/Logo";
+
+export default function WelcomePage() {
+  const router = useRouter();
+  const [starting, setStarting] = useState(false);
+
+  const handleStart = () => {
+    setStarting(true);
+    setTimeout(() => router.push("/survey"), 600);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="flex min-h-screen flex-col bg-slate-100">
+      {/* Header */}
+      <header className="relative overflow-hidden bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-10"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, #fff 0 2px, transparent 2px 24px)",
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+        <div className="relative mx-auto max-w-[680px] px-4 py-8 sm:py-10">
+          <div className="mb-4 flex items-center gap-3">
+            <Logo size={56} className="border-2 border-amber-300 shadow-lg" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-200">
+                แบบประเมินออนไลน์
+              </p>
+              <p className="text-xs text-blue-200">ฉบับประเมินพฤติกรรมการใช้ AI</p>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold leading-snug sm:text-3xl">
+            แบบประเมินพฤติกรรมการใช้ปัญญาประดิษฐ์ (AI)
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-2 text-sm text-blue-100 sm:text-base">
+            เพื่อส่งเสริมการเรียนรู้ของนักเรียน · ไม่ระบุตัวตัวตน · ใช้เวลา 5–8 นาที
+          </p>
+          <div className="mt-4 h-1 w-24 rounded-full bg-amber-300" />
+        </div>
+      </header>
+
+      {/* Body */}
+      <div className="mx-auto w-full max-w-[680px] flex-1 px-4 py-12">
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-slate-800">ยินดีต้อนรับ</h2>
+          <p className="mt-3 leading-relaxed text-slate-600">
+            แบบประเมินฉบับนี้จัดทำขึ้นเพื่อศึกษาพฤติกรรมและความคิดเห็นของนักเรียน
+            เกี่ยวกับการใช้ปัญญาประดิษฐ์ (AI) ในการเรียนและการทำงาน
+            ข้อมูลที่ได้จะนำไปใช้เพื่อพัฒนาการจัดการเรียนรู้ให้เหมาะสมกับนักเรียน
+          </p>
+          <ul className="mx-auto mt-6 max-w-md space-y-2 text-left text-sm text-slate-600">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-800">✓</span>
+              ไม่ระบุตัวตัวตน และไม่มีผลต่อคะแนนการเรียน
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-800">✓</span>
+              ตอบตามพฤติกรรมและความคิดเห็นที่เกิดขึ้นจริง
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-800">✓</span>
+              ใช้เวลาไม่นาน ประมาณ 5–8 นาที
+            </li>
+          </ul>
+
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={starting}
+            className="mt-8 rounded-lg bg-blue-900 px-10 py-4 text-lg font-bold text-white shadow-md transition hover:bg-blue-800 disabled:opacity-60"
+          >
+            {starting ? "กำลังนำทาง..." : "เริ่มทำแบบประเมิน"}
+          </button>
+
+          <p className="mt-4 text-xs text-slate-500">
+            กดปุ่มด้านบนเพื่อเริ่มต้นการทำแบบประเมิน
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
+        <p className="font-semibold text-slate-600">
+          🔒 ข้อมูลของคุณจะถูกเก็บเป็นความลับและใช้เพื่อการศึกษาเท่านั้น
+        </p>
+        <p className="mt-1">แบบประเมินพฤติกรรมการใช้ปัญญาประดิษฐ์ (AI) · สำหรับนักเรียน</p>
+      </footer>
+    </main>
   );
 }
