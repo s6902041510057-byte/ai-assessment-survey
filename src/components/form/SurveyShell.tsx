@@ -253,16 +253,11 @@ export function SurveyShell() {
       </div>
 
       {/* Page title */}
-      <div className="mb-5 flex items-start gap-3 border-b border-slate-200 pb-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-900 text-lg font-bold text-white shadow-sm">
-          {pageIndex + 1}
-        </span>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800 sm:text-xl">{currentPage.title}</h2>
-          {currentPage.subtitle && (
-            <p className="mt-1 text-sm text-slate-500">{currentPage.subtitle}</p>
-          )}
-        </div>
+      <div className="mb-5 border-b border-slate-200 pb-4">
+        <h2 className="text-lg font-bold text-slate-800 sm:text-xl">{currentPage.title}</h2>
+        {currentPage.subtitle && (
+          <p className="mt-1 text-sm text-slate-500">{currentPage.subtitle}</p>
+        )}
       </div>
 
       {isOpenPage && (
