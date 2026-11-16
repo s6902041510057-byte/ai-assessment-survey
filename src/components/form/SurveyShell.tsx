@@ -334,12 +334,12 @@ export function SurveyShell() {
       )}
 
       {/* Navigation */}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
+      <div className="mt-8 flex flex-row items-center justify-between gap-2">
         <button
           type="button"
           onClick={goPrev}
           disabled={pageIndex === 0}
-          className="rounded-lg border-2 border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-blue-800 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg border-2 border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-800 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-40 sm:px-6"
         >
           ← ย้อนกลับ
         </button>
@@ -351,7 +351,7 @@ export function SurveyShell() {
                 type="button"
                 onClick={handleSkipFeelings}
                 disabled={submitting}
-                className="rounded-lg border-2 border-slate-300 bg-white px-6 py-3 font-semibold text-slate-600 transition hover:border-blue-400 hover:text-blue-800 disabled:opacity-50"
+                className="rounded-lg border-2 border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-400 hover:text-blue-800 disabled:opacity-50 sm:px-6"
               >
                 ข้าม (ไม่ตอบ)
               </button>
@@ -359,7 +359,7 @@ export function SurveyShell() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="rounded-lg bg-blue-900 px-8 py-3 font-bold text-white shadow-md transition hover:bg-blue-800 disabled:opacity-50"
+                className="rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-blue-800 disabled:opacity-50 sm:px-8 sm:text-base"
               >
                 {submitting ? "กำลังส่ง..." : "ส่งคำตอบ"}
               </button>
@@ -368,7 +368,7 @@ export function SurveyShell() {
             <button
               type="button"
               onClick={goNext}
-              className="rounded-lg bg-blue-900 px-8 py-3 font-bold text-white shadow-md transition hover:bg-blue-800"
+              className="rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-blue-800 sm:px-8 sm:text-base"
             >
               ส่ง →
             </button>
@@ -376,7 +376,7 @@ export function SurveyShell() {
             <button
               type="button"
               onClick={goNext}
-              className="rounded-lg bg-blue-900 px-8 py-3 font-bold text-white shadow-md transition hover:bg-blue-800"
+              className="rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-blue-800 sm:px-8 sm:text-base"
             >
               ถัดไป →
             </button>
