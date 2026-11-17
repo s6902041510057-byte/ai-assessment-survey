@@ -97,18 +97,23 @@ function buildXlsxRows(
   return responses.map((r) => {
     const row: Record<string, string> = {
       submitted_at: r.submitted_at,
-      grade_level: r.grade_level ?? "",
-      used_ai: r.used_ai ?? "",
-      ai_tools: (r.ai_tools ?? [])
-        .map((t) =>
-          t === "other"
-            ? ((r.answers?.q4_ai_tools_other as string) || "อื่น ๆ")
-            : t,
-        )
-        .join("; "),
     };
     for (const id of questionIds) {
-      row[questionTitles[id]] = formatAnswer(r.answers?.[id]);
+      let val = formatAnswer(r.answers?.[id]);
+      // สำหรับข้อ "AI ที่คุณเคยใช้" ให้แปลง "other" เป็นข้อความที่พิมพ์
+      if (id === "q4_ai_tools") {
+        const v = r.answers?.[id];
+        if (Array.isArray(v)) {
+          val = (v as string[])
+            .map((t) =>
+              t === "other"
+                ? ((r.answers?.q4_ai_tools_other as string) || "อื่น ๆ")
+                : t,
+            )
+            .join("; ");
+        }
+      }
+      row[questionTitles[id]] = val;
     }
     return row;
   });
