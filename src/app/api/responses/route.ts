@@ -7,7 +7,15 @@ async function isAdmin(): Promise<boolean> {
   return c.get("admin_auth")?.value === "1";
 }
 
+const MAX_BODY_SIZE = 1_000_000; // 1 MB
+
 export async function POST(req: NextRequest) {
+  // จำกัดขนาด request body เพื่อป้องกัน DoS
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (contentLength > MAX_BODY_SIZE) {
+    return NextResponse.json({ error: "ข้อมูลขนาดใหญ่เกินไป" }, { status: 413 });
+  }
+
   const sb = supabaseAdmin();
   if (!sb) {
     return NextResponse.json(
@@ -23,7 +31,11 @@ export async function POST(req: NextRequest) {
     answers?: unknown;
   };
   try {
-    body = await req.json();
+    const text = await req.text();
+    if (text.length > MAX_BODY_SIZE) {
+      return NextResponse.json({ error: "ข้อมูลขนาดใหญ่เกินไป" }, { status: 413 });
+    }
+    body = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }

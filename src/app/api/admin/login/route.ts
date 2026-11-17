@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+// Simple in-memory rate limiter (per instance)
+const attempts = new Map<string, number[]>();
+const WINDOW_MS = 60_000; // 1 minute
+const MAX_ATTEMPTS = 5;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const list = attempts.get(ip) ?? [];
+  const recent = list.filter((t) => now - t < WINDOW_MS);
+  attempts.set(ip, recent);
+  if (recent.length >= MAX_ATTEMPTS) return true;
+  recent.push(now);
+  attempts.set(ip, recent);
+  return false;
+}
+
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "พยายามเข้าสู่ระบบมากเกินไป กรุณารอ 1 นาที" },
+      { status: 429 },
+    );
+  }
+
   let body: { password?: unknown };
   try {
     body = await req.json();
