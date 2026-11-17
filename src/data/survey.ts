@@ -18,7 +18,7 @@ export const survey: Survey = {
     // ---- ตอนที่ 1 ข้อมูลทั่วไป ----
     {
       id: "q1_grade",
-      type: "dropdown",
+      type: "grade-room",
       title: "ระดับชั้น",
       required: true,
       section: "general",

@@ -1,6 +1,7 @@
 export type QuestionType =
   | "short-text"
   | "dropdown"
+  | "grade-room"
   | "single-choice"
   | "multiple-choice"
   | "scale"
@@ -20,6 +21,11 @@ export interface ShortTextQuestion extends CommonQuestion {
 
 export interface DropdownQuestion extends CommonQuestion {
   type: "dropdown";
+  options: { value: string; label: string }[];
+}
+
+export interface GradeRoomQuestion extends CommonQuestion {
+  type: "grade-room";
   options: { value: string; label: string }[];
 }
 
@@ -51,6 +57,7 @@ export interface LongTextQuestion extends CommonQuestion {
 export type Question =
   | ShortTextQuestion
   | DropdownQuestion
+  | GradeRoomQuestion
   | SingleChoiceQuestion
   | MultipleChoiceQuestion
   | ScaleQuestion

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { Question } from "@/lib/types";
 
 interface QuestionCardProps {
@@ -27,6 +28,55 @@ export function QuestionCard({
     onChange(next);
   };
 
+  // สำหรับ grade-room: แยกค่า combined (เช่น "2ชทส3") เป็น level + room
+  // level = 2 ตัวแรก (เช่น "2ช" → "ปวช 2", "1ส" → "ปวส 1")
+  const isGradeRoom = question.type === "grade-room";
+  const levelMap: Record<string, string> = {
+    "1ช": "ปวช 1",
+    "2ช": "ปวช 2",
+    "3ช": "ปวช 3",
+    "1ส": "ปวส 1",
+    "2ส": "ปวส 2",
+  };
+  const levelOptions = isGradeRoom
+    ? Array.from(new Set(question.options.map((o) => o.value.slice(0, 2))))
+        .map((code) => ({ code, label: levelMap[code] || code }))
+        .filter((l) => l.label)
+    : [];
+  const [level, setLevel] = useState<string>(() =>
+    isGradeRoom && typeof value === "string" && value ? value.slice(0, 2) : "",
+  );
+  const [room, setRoom] = useState<string>(() =>
+    isGradeRoom && typeof value === "string" ? value : "",
+  );
+
+  useEffect(() => {
+    if (!isGradeRoom) return;
+    if (typeof value === "string" && value) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLevel(value.slice(0, 2));
+      setRoom(value);
+    } else {
+      setLevel("");
+      setRoom("");
+    }
+  }, [value, isGradeRoom]);
+
+  const handleLevelChange = (lvl: string) => {
+    setLevel(lvl);
+    setRoom("");
+    onChange(undefined);
+  };
+
+  const handleRoomChange = (r: string) => {
+    setRoom(r);
+    if (r) {
+      onChange(r);
+    } else {
+      onChange(undefined);
+    }
+  };
+
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
       <div className="mb-4 flex items-start gap-3">
@@ -45,6 +95,54 @@ export function QuestionCard({
       </div>
 
       <div className="mt-4">
+        {question.type === "grade-room" && (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                ระดับชั้น
+              </label>
+              <select
+                value={level}
+                onChange={(e) => handleLevelChange(e.target.value)}
+                className="h-12 w-full rounded-lg border-2 border-slate-200 bg-white px-4 text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-800/15"
+              >
+                <option value="">— เลือกระดับชั้น —</option>
+                {levelOptions.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                ห้อง
+              </label>
+              <select
+                value={room}
+                onChange={(e) => handleRoomChange(e.target.value)}
+                disabled={!level}
+                className="h-12 w-full rounded-lg border-2 border-slate-200 bg-white px-4 text-slate-800 outline-none transition focus:border-blue-800 focus:ring-4 focus:ring-blue-800/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60"
+              >
+                <option value="">— เลือกห้อง —</option>
+                {level &&
+                  question.options
+                    .filter((o) => o.value.startsWith(level))
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+              </select>
+            </div>
+            {room && (
+              <p className="text-xs text-slate-500">
+                ระดับชั้นที่เลือก: <span className="font-bold text-blue-800">{room}</span>
+              </p>
+            )}
+          </div>
+        )}
+
         {question.type === "dropdown" && (
           <select
             value={(value as string) ?? ""}
