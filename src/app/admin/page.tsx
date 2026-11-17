@@ -34,8 +34,14 @@ const QUESTION_TITLES: Record<string, string> = Object.fromEntries(
   questions.map((q) => [q.id, q.title]),
 );
 
+// อาจารย์ไม่เห็นข้อมูล "ความรู้สึก" (q39)
+const TEACHER_QUESTION_TITLES: Record<string, string> = Object.fromEntries(
+  questions.filter((q) => q.id !== "q39").map((q) => [q.id, q.title]),
+);
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [role, setRole] = useState<"admin" | "teacher">("admin");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
@@ -50,6 +56,21 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const fetchRole = async () => {
+    try {
+      const res = await fetch("/api/admin/me", { cache: "no-store" });
+      const data = await res.json();
+      if (data?.authenticated) {
+        setRole(data.role === "teacher" ? "teacher" : "admin");
+        setAuthed(true);
+      } else {
+        setAuthed(false);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchResponses = async () => {
     setLoading(true);
@@ -77,6 +98,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRole();
     fetchResponses();
   }, []);
 
@@ -94,6 +116,8 @@ export default function AdminPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "เข้าสู่ระบบไม่สำเร็จ");
       }
+      const data = await res.json().catch(() => ({}));
+      if (data?.role) setRole(data.role === "teacher" ? "teacher" : "admin");
       setPassword("");
       await fetchResponses();
     } catch (e) {
@@ -109,13 +133,15 @@ export default function AdminPage() {
     setResponses([]);
   };
 
+  const exportTitles = role === "teacher" ? TEACHER_QUESTION_TITLES : QUESTION_TITLES;
+
   const handleExportCSV = () => {
-    const csv = responsesToCSV(responses, QUESTION_TITLES);
+    const csv = responsesToCSV(responses, exportTitles);
     downloadCSV(csv, timestampName("responses"));
   };
 
   const handleExportXLSX = () => {
-    const wb = responsesToXLSX(responses, QUESTION_TITLES);
+    const wb = responsesToXLSX(responses, exportTitles);
     downloadXLSX(wb, timestampName("responses", "xlsx"));
   };
 
@@ -610,9 +636,12 @@ export default function AdminPage() {
             แบบประเมิน: {survey.title} · จำนวนผู้ตอบ{" "}
             <span className="font-bold text-amber-300">{responses.length}</span> คน
           </p>
+          <span className="mt-1 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold text-white">
+            {role === "teacher" ? "👨‍🏫 อาจารย์" : "👑 Admin"}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {selected.size > 0 && (
+          {role === "admin" && selected.size > 0 && (
             <button
               type="button"
               onClick={deleteSelected}
@@ -690,18 +719,20 @@ export default function AdminPage() {
               คำถามปลายเปิด
             </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setShowFeelings(true)}
-            className="group flex items-start gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-left transition hover:border-blue-400 hover:bg-blue-50"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-500 text-base text-white">
-              💬
-            </span>
-            <span className="pt-1 text-sm font-medium text-slate-700 group-hover:text-blue-800">
-              ความรู้สึกที่อยากจะบอก
-            </span>
-          </button>
+          {role === "admin" && (
+            <button
+              type="button"
+              onClick={() => setShowFeelings(true)}
+              className="group flex items-start gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-left transition hover:border-blue-400 hover:bg-blue-50"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-500 text-base text-white">
+                💬
+              </span>
+              <span className="pt-1 text-sm font-medium text-slate-700 group-hover:text-blue-800">
+                ความรู้สึกที่อยากจะบอก
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -909,14 +940,16 @@ export default function AdminPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-blue-100">
             <tr>
-              <th className="px-3 py-2 text-left">
-                <input
-                  type="checkbox"
-                  checked={responses.length > 0 && selected.size === responses.length}
-                  onChange={toggleSelectAll}
-                  aria-label="เลือกทั้งหมด"
-                />
-              </th>
+              {role === "admin" && (
+                <th className="px-3 py-2 text-left">
+                  <input
+                    type="checkbox"
+                    checked={responses.length > 0 && selected.size === responses.length}
+                    onChange={toggleSelectAll}
+                    aria-label="เลือกทั้งหมด"
+                  />
+                </th>
+              )}
               <th className="px-3 py-2 text-left font-bold text-slate-700">วันที่</th>
               <th className="px-3 py-2 text-left font-bold text-slate-700">ระดับชั้น</th>
               <th className="px-3 py-2 text-left font-bold text-slate-700">เคยใช้ AI</th>
@@ -928,7 +961,10 @@ export default function AdminPage() {
           <tbody>
             {responses.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                <td
+                  colSpan={role === "admin" ? 7 : 5}
+                  className="px-3 py-6 text-center text-slate-500"
+                >
                   ยังไม่มีข้อมูล
                 </td>
               </tr>
@@ -941,14 +977,16 @@ export default function AdminPage() {
               const avg = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : "-";
               return (
                 <tr key={r.id} className="border-t border-slate-100 hover:bg-blue-50">
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(r.id)}
-                      onChange={() => toggleSelect(r.id)}
-                      aria-label="เลือกรายการ"
-                    />
-                  </td>
+                  {role === "admin" && (
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleSelect(r.id)}
+                        aria-label="เลือกรายการ"
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2 text-muted">
                     {new Date(r.submitted_at).toLocaleString("th-TH")}
                   </td>
@@ -964,16 +1002,18 @@ export default function AdminPage() {
                       .join(", ")}
                   </td>
                   <td className="px-3 py-2 font-semibold text-blue-700">{avg}</td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => deleteOne(r.id)}
-                      disabled={deleting}
-                      className="rounded-lg border border-error/40 px-2 py-1 text-xs font-medium text-error transition hover:bg-error/10 disabled:opacity-50"
-                    >
-                      ลบ
-                    </button>
-                  </td>
+                  {role === "admin" && (
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => deleteOne(r.id)}
+                        disabled={deleting}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-100 disabled:opacity-50"
+                      >
+                        ลบ
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}

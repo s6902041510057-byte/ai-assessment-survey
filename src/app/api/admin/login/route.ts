@@ -10,9 +10,14 @@ export async function POST(req: NextRequest) {
   }
 
   const password = String(body?.password ?? "");
-  const expected = process.env.ADMIN_PASSWORD || "1234";
+  const adminPw = process.env.ADMIN_PASSWORD || "1234";
+  const teacherPw = process.env.TEACHER_PASSWORD || "teacher";
 
-  if (password !== expected) {
+  let role: "admin" | "teacher" | null = null;
+  if (password === adminPw) role = "admin";
+  else if (password === teacherPw) role = "teacher";
+
+  if (!role) {
     return NextResponse.json({ error: "รหัสผ่านไม่ถูกต้อง" }, { status: 401 });
   }
 
@@ -24,6 +29,13 @@ export async function POST(req: NextRequest) {
     path: "/",
     maxAge: 60 * 60 * 24,
   });
+  cookieStore.set("admin_role", role, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, role });
 }
