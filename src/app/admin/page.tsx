@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [showOpenEnded, setShowOpenEnded] = useState(false);
   const [showFeelings, setShowFeelings] = useState(false);
   const [filterRoom, setFilterRoom] = useState<string>("all");
+  const [dimFilterRoom, setDimFilterRoom] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -312,11 +313,15 @@ export default function AdminPage() {
     count,
   }));
 
-  // Average score per dimension
+  // Average score per dimension (filtered by dimFilterRoom)
+  const dimResponses =
+    dimFilterRoom === "all"
+      ? responses
+      : responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === dimFilterRoom);
   const dimensionAverages = dimensions().map((dim) => {
     const qs = questionsByDimension(dim);
     const ids = qs.map((q) => q.id);
-    const values = responses
+    const values = dimResponses
       .map((r) => {
         const nums = ids
           .map((id) => Number(r.answers?.[id]))
@@ -733,7 +738,21 @@ export default function AdminPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-slate-700">คะแนนเฉลี่ยตามด้าน</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-700">คะแนนเฉลี่ยตามด้าน</h2>
+            <select
+              value={dimFilterRoom}
+              onChange={(e) => setDimFilterRoom(e.target.value)}
+              className="h-9 rounded-lg border-2 border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-800"
+            >
+              <option value="all">ทั้งหมด</option>
+              {roomsInData.map((room) => (
+                <option key={room} value={room}>
+                  {room}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dimensionAverages} layout="vertical">
@@ -762,6 +781,128 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {/* Per-room dimension averages matrix */}
+      {responses.length > 0 && (
+        <div className="mb-8 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-4 py-3">
+            <h2 className="text-sm font-bold text-slate-700">
+              คะแนนเฉลี่ยตามด้าน แยกตามห้อง
+            </h2>
+            <p className="text-xs text-slate-500">
+              เปรียบเทียบค่าเฉลี่ยของแต่ละด้านในแต่ละห้อง
+            </p>
+          </div>
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left font-bold text-slate-700">
+                  ด้าน
+                </th>
+                {roomsInData.map((room) => (
+                  <th key={room} className="px-3 py-2 text-center font-bold text-slate-700">
+                    {room}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dimensions().map((dim) => {
+                const qs = questionsByDimension(dim);
+                const ids = qs.map((q) => q.id);
+                return (
+                  <tr key={dim} className="border-t border-slate-100">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-slate-700">
+                      {dim.replace(/^ด้านที่ \d+ /, "")}
+                    </td>
+                    {roomsInData.map((room) => {
+                      const rs = responses.filter(
+                        (r) => (r.grade_level || "(ไม่ระบุ)") === room,
+                      );
+                      const vals = rs
+                        .map((r) => {
+                          const nums = ids
+                            .map((id) => Number(r.answers?.[id]))
+                            .filter((n) => !Number.isNaN(n));
+                          if (nums.length === 0) return null;
+                          return nums.reduce((a, b) => a + b, 0) / nums.length;
+                        })
+                        .filter((v): v is number => v !== null);
+                      const avg = vals.length
+                        ? vals.reduce((a, b) => a + b, 0) / vals.length
+                        : null;
+                      const color =
+                        avg === null
+                          ? "text-slate-400"
+                          : avg >= 4
+                            ? "text-emerald-600 font-bold"
+                            : avg >= 3
+                              ? "text-blue-700 font-semibold"
+                              : avg >= 2
+                                ? "text-amber-600"
+                                : "text-rose-600";
+                      return (
+                        <td key={room} className="px-3 py-2 text-center">
+                          <span className={color}>
+                            {avg === null ? "-" : avg.toFixed(2)}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+              {/* Overall row */}
+              <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                <td className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-slate-700">
+                  เฉลี่ยรวม
+                </td>
+                {roomsInData.map((room) => {
+                  const rs = responses.filter(
+                    (r) => (r.grade_level || "(ไม่ระบุ)") === room,
+                  );
+                  const scaleIds = questions
+                    .filter((q) => q.type === "scale")
+                    .map((q) => q.id);
+                  const vals = rs
+                    .map((r) => {
+                      const nums = scaleIds
+                        .map((id) => Number(r.answers?.[id]))
+                        .filter((n) => !Number.isNaN(n));
+                      if (nums.length === 0) return null;
+                      return nums.reduce((a, b) => a + b, 0) / nums.length;
+                    })
+                    .filter((v): v is number => v !== null);
+                  const avg = vals.length
+                    ? vals.reduce((a, b) => a + b, 0) / vals.length
+                    : null;
+                  return (
+                    <td key={room} className="px-3 py-2 text-center text-blue-700">
+                      {avg === null ? "-" : avg.toFixed(2)}
+                    </td>
+                  );
+                })}
+              </tr>
+              {/* Count row */}
+              <tr className="border-t border-slate-100 text-xs text-slate-500">
+                <td className="sticky left-0 z-10 bg-white px-3 py-2">
+                  จำนวนผู้ตอบ
+                </td>
+                {roomsInData.map((room) => {
+                  const count = responses.filter(
+                    (r) => (r.grade_level || "(ไม่ระบุ)") === room,
+                  ).length;
+                  return (
+                    <td key={room} className="px-3 py-2 text-center">
+                      {count}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
