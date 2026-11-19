@@ -12,8 +12,6 @@ import {
 } from "recharts";
 import { survey, questions, dimensions, questionsByDimension } from "@/data/survey";
 import {
-  responsesToCSV,
-  downloadCSV,
   responsesToXLSX,
   downloadXLSX,
   timestampName,
@@ -133,11 +131,6 @@ export default function AdminPage() {
   };
 
   const exportTitles = role === "teacher" ? TEACHER_QUESTION_TITLES : QUESTION_TITLES;
-
-  const handleExportCSV = () => {
-    const csv = responsesToCSV(responses, exportTitles);
-    downloadCSV(csv, timestampName("responses"));
-  };
 
   const handleExportXLSX = () => {
     const wb = responsesToXLSX(responses, exportTitles);
@@ -618,14 +611,6 @@ export default function AdminPage() {
               {deleting ? "กำลังลบ..." : `ลบ ${selected.size} รายการที่เลือก`}
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            disabled={responses.length === 0}
-            className="rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-          >
-            ดาวน์โหลด CSV
-          </button>
           <button
             type="button"
             onClick={handleExportXLSX}
