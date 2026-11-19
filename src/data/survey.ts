@@ -431,6 +431,7 @@ export const survey: Survey = {
       title: "คิดว่า AI เป็นเครื่องมือที่ช่วยส่งเสริมการเรียนรู้ของฉันได้",
       required: true,
       section: "attitude",
+      dimension: "ตอนที่ 3 ทัศนคติและความคิดเห็น",
       min: 1,
       max: 5,
       minLabel: "ไม่เห็นด้วยอย่างยิ่ง",
@@ -443,6 +444,7 @@ export const survey: Survey = {
       title: "คิดว่าการใช้ AI มากเกินไปอาจทำให้ฉันมีโอกาสฝึกคิดด้วยตนเองน้อยลง",
       required: true,
       section: "attitude",
+      dimension: "ตอนที่ 3 ทัศนคติและความคิดเห็น",
       min: 1,
       max: 5,
       minLabel: "ไม่เห็นด้วยอย่างยิ่ง",
@@ -455,6 +457,7 @@ export const survey: Survey = {
       title: "คิดว่าการใช้ AI ควรเป็นเครื่องมือช่วยในการเรียนรู้ ไม่ใช่การทำงานแทนตนเองทั้งหมด",
       required: true,
       section: "attitude",
+      dimension: "ตอนที่ 3 ทัศนคติและความคิดเห็น",
       min: 1,
       max: 5,
       minLabel: "ไม่เห็นด้วยอย่างยิ่ง",
@@ -539,8 +542,8 @@ export function buildPages(): SurveyPage[] {
     questions: generalQs,
   });
 
-  // ตอนที่ 2: one page per dimension
-  const dims = dimensions();
+  // ตอนที่ 2: one page per dimension (เฉพาะ "ด้านที่ X" — ข้าม "ตอนที่ 3" เพราะมีหน้า attitude แยกแล้ว)
+  const dims = dimensions().filter((d) => d.startsWith("ด้านที่"));
   for (const dim of dims) {
     pages.push({
       id: dim,

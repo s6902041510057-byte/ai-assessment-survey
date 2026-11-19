@@ -51,8 +51,7 @@ export default function AdminPage() {
   const [activeDimension, setActiveDimension] = useState<string | null>(null);
   const [showOpenEnded, setShowOpenEnded] = useState(false);
   const [showFeelings, setShowFeelings] = useState(false);
-  const [filterRoom, setFilterRoom] = useState<string>("all");
-  const [dimFilterRoom, setDimFilterRoom] = useState<string>("all");
+  const [globalRoomFilter, setGlobalRoomFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -150,8 +149,11 @@ export default function AdminPage() {
     new Set(responses.map((r) => r.grade_level || "(ไม่ระบุ)")),
   ).sort();
 
-  const filteredByRoom = (list: ResponseRow[]) =>
-    filterRoom === "all" ? list : list.filter((r) => (r.grade_level || "(ไม่ระบุ)") === filterRoom);
+  // กรองข้อมูลตามห้องที่เลือก (global filter)
+  const filteredResponses =
+    globalRoomFilter === "all"
+      ? responses
+      : responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === globalRoomFilter);
 
   const deleteOne = async (id: string) => {
     if (!confirm("ต้องการลบรายการนี้หรือไม่?")) return;
@@ -329,7 +331,7 @@ export default function AdminPage() {
   }
 
   // ---- Charts data ----
-  const gradeCounts = responses.reduce<Record<string, number>>((acc, r) => {
+  const gradeCounts = filteredResponses.reduce<Record<string, number>>((acc, r) => {
     const key = r.grade_level || "(ไม่ระบุ)";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
@@ -339,15 +341,11 @@ export default function AdminPage() {
     count,
   }));
 
-  // Average score per dimension (filtered by dimFilterRoom)
-  const dimResponses =
-    dimFilterRoom === "all"
-      ? responses
-      : responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === dimFilterRoom);
+  // Average score per dimension
   const dimensionAverages = dimensions().map((dim) => {
     const qs = questionsByDimension(dim);
     const ids = qs.map((q) => q.id);
-    const values = dimResponses
+    const values = filteredResponses
       .map((r) => {
         const nums = ids
           .map((id) => Number(r.answers?.[id]))
@@ -371,7 +369,7 @@ export default function AdminPage() {
   };
   const toolCounts: Record<string, number> = {};
   const toolDisplay: Record<string, string> = {};
-  for (const r of responses) {
+  for (const r of filteredResponses) {
     for (const t of r.ai_tools ?? []) {
       if (t === "other") {
         const custom = String(r.answers?.q4_ai_tools_other ?? "").trim();
@@ -396,7 +394,7 @@ export default function AdminPage() {
 
   // Average per grade level (overall behavior score)
   const gradeAverages = Object.keys(gradeCounts).map((grade) => {
-    const rs = responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === grade);
+    const rs = filteredResponses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === grade);
     const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
     const vals = rs
       .map((r) => {
@@ -432,23 +430,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <label htmlFor="room-filter" className="text-sm font-semibold text-slate-700">
-            เลือกห้อง:
-          </label>
-          <select
-            id="room-filter"
-            value={filterRoom}
-            onChange={(e) => setFilterRoom(e.target.value)}
-            className="h-10 rounded-lg border-2 border-slate-200 bg-white px-3 text-slate-800 outline-none transition focus:border-blue-800"
-          >
-            <option value="all">ทั้งหมด ({responses.length})</option>
-            {roomsInData.map((room) => (
-              <option key={room} value={room}>{room}</option>
-            ))}
-          </select>
-        </div>
-
 
         {responses.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">ยังไม่มีข้อมูล</p>
@@ -463,7 +444,7 @@ export default function AdminPage() {
                   {q.title}
                 </h3>
                 <div className="space-y-3">
-                  {filteredByRoom(responses).map((r, i) => {
+                  {filteredResponses.map((r, i) => {
                     const ans = String(r.answers?.[q.id] ?? "").trim();
                     if (!ans) return null;
                     return (
@@ -478,7 +459,7 @@ export default function AdminPage() {
                       </div>
                     );
                   })}
-                  {filteredByRoom(responses).every((r) => !String(r.answers?.[q.id] ?? "").trim()) && (
+                  {filteredResponses.every((r) => !String(r.answers?.[q.id] ?? "").trim()) && (
                     <p className="text-sm text-slate-500">ยังไม่มีคำตอบ</p>
                   )}
                 </div>
@@ -512,29 +493,12 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <label htmlFor="room-filter" className="text-sm font-semibold text-slate-700">
-            เลือกห้อง:
-          </label>
-          <select
-            id="room-filter"
-            value={filterRoom}
-            onChange={(e) => setFilterRoom(e.target.value)}
-            className="h-10 rounded-lg border-2 border-slate-200 bg-white px-3 text-slate-800 outline-none transition focus:border-blue-800"
-          >
-            <option value="all">ทั้งหมด ({responses.length})</option>
-            {roomsInData.map((room) => (
-              <option key={room} value={room}>{room}</option>
-            ))}
-          </select>
-        </div>
-
 
         {responses.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">ยังไม่มีข้อมูล</p>
         ) : (
           <div className="space-y-3">
-            {filteredByRoom(responses).map((r, i) => {
+            {filteredResponses.map((r, i) => {
               const ans = String(r.answers?.q39 ?? "").trim();
               if (!ans) return null;
               return (
@@ -549,7 +513,7 @@ export default function AdminPage() {
                 </div>
               );
             })}
-            {filteredByRoom(responses).every((r) => !String(r.answers?.q39 ?? "").trim()) && (
+            {filteredResponses.every((r) => !String(r.answers?.q39 ?? "").trim()) && (
               <p className="py-6 text-center text-sm text-slate-500">
                 ยังไม่มีคำตอบ (นักเรียนข้ามไป)
               </p>
@@ -576,7 +540,7 @@ export default function AdminPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-800">{activeDimension}</h1>
             <p className="text-sm text-blue-100">
-              การกระจายคำตอบ (1–5) ของแต่ละข้อ · {responses.length} ผู้ตอบ
+              การกระจายคำตอบ (1–5) ของแต่ละข้อ · {filteredResponses.length} ผู้ตอบ
             </p>
           </div>
         </div>
@@ -585,9 +549,9 @@ export default function AdminPage() {
           {dimQuestions.map((q) => {
             const counts = [1, 2, 3, 4, 5].map((score) => ({
               score: String(score),
-              count: responses.filter((r) => Number(r.answers?.[q.id]) === score).length,
+              count: filteredResponses.filter((r) => Number(r.answers?.[q.id]) === score).length,
             }));
-            const vals = responses
+            const vals = filteredResponses
               .map((r) => Number(r.answers?.[q.id]))
               .filter((n) => !Number.isNaN(n));
             const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
@@ -634,7 +598,10 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-white">🎛️ แผงควบคุม Admin</h1>
           <p className="text-sm text-blue-100">
             แบบประเมิน: {survey.title} · จำนวนผู้ตอบ{" "}
-            <span className="font-bold text-amber-300">{responses.length}</span> คน
+            <span className="font-bold text-amber-300">{filteredResponses.length}</span> คน
+            {globalRoomFilter !== "all" && (
+              <span className="ml-1 text-blue-200">({globalRoomFilter})</span>
+            )}
           </p>
           <span className="mt-1 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold text-white">
             {role === "teacher" ? "👨‍🏫 อาจารย์" : "👑 Admin"}
@@ -683,6 +650,35 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Global room filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <label htmlFor="global-room-filter" className="text-sm font-semibold text-slate-700">
+          เลือกห้อง:
+        </label>
+        <select
+          id="global-room-filter"
+          value={globalRoomFilter}
+          onChange={(e) => setGlobalRoomFilter(e.target.value)}
+          className="h-10 rounded-lg border-2 border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-800"
+        >
+          <option value="all">ทั้งหมด ({responses.length})</option>
+          {roomsInData.map((room) => (
+            <option key={room} value={room}>
+              {room}
+            </option>
+          ))}
+        </select>
+        {globalRoomFilter !== "all" && (
+          <button
+            type="button"
+            onClick={() => setGlobalRoomFilter("all")}
+            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+          >
+            ล้างตัวกรอง
+          </button>
+        )}
+      </div>
+
       {/* Dimension buttons */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-slate-700">
@@ -690,7 +686,10 @@ export default function AdminPage() {
         </h2>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {dimensions().map((dim, i) => {
-            const title = dim.replace(/^ด้านที่\s*\d+\s*/, "");
+            const title =
+              dim === "ตอนที่ 3 ทัศนคติและความคิดเห็น"
+                ? "ทัศนคติและความคิดเห็น"
+                : dim.replace(/^ด้านที่\s*\d+\s*/, "");
             return (
               <button
                 key={dim}
@@ -769,21 +768,7 @@ export default function AdminPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-slate-700">คะแนนเฉลี่ยตามด้าน</h2>
-            <select
-              value={dimFilterRoom}
-              onChange={(e) => setDimFilterRoom(e.target.value)}
-              className="h-9 rounded-lg border-2 border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-800"
-            >
-              <option value="all">ทั้งหมด</option>
-              {roomsInData.map((room) => (
-                <option key={room} value={room}>
-                  {room}
-                </option>
-              ))}
-            </select>
-          </div>
+          <h2 className="mb-3 text-sm font-bold text-slate-700">คะแนนเฉลี่ยตามด้าน</h2>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dimensionAverages} layout="vertical">
@@ -814,7 +799,7 @@ export default function AdminPage() {
       </div>
 
       {/* Per-room dimension averages matrix */}
-      {responses.length > 0 && (
+      {responses.length > 0 && globalRoomFilter === "all" && (
         <div className="mb-8 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-4 py-3">
             <h2 className="text-sm font-bold text-slate-700">
@@ -959,7 +944,7 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {responses.length === 0 && (
+            {filteredResponses.length === 0 && (
               <tr>
                 <td
                   colSpan={role === "admin" ? 7 : 5}
@@ -969,7 +954,7 @@ export default function AdminPage() {
                 </td>
               </tr>
             )}
-            {responses.map((r) => {
+            {filteredResponses.map((r) => {
               const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
               const nums = scaleIds
                 .map((id) => Number(r.answers?.[id]))
