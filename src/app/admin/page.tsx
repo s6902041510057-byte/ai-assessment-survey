@@ -50,6 +50,8 @@ export default function AdminPage() {
   const [showOpenEnded, setShowOpenEnded] = useState(false);
   const [showFeelings, setShowFeelings] = useState(false);
   const [globalRoomFilter, setGlobalRoomFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -147,6 +149,13 @@ export default function AdminPage() {
     globalRoomFilter === "all"
       ? responses
       : responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === globalRoomFilter);
+
+  const totalPages = Math.max(1, Math.ceil(filteredResponses.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedResponses = filteredResponses.slice(
+    safePage * PAGE_SIZE,
+    safePage * PAGE_SIZE + PAGE_SIZE,
+  );
 
   const deleteOne = async (id: string) => {
     if (!confirm("ต้องการลบรายการนี้หรือไม่?")) return;
@@ -643,7 +652,10 @@ export default function AdminPage() {
         <select
           id="global-room-filter"
           value={globalRoomFilter}
-          onChange={(e) => setGlobalRoomFilter(e.target.value)}
+          onChange={(e) => {
+            setGlobalRoomFilter(e.target.value);
+            setPage(0);
+          }}
           className="h-10 rounded-lg border-2 border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-800"
         >
           <option value="all">ทั้งหมด ({responses.length})</option>
@@ -939,7 +951,7 @@ export default function AdminPage() {
                 </td>
               </tr>
             )}
-            {filteredResponses.map((r) => {
+            {paginatedResponses.map((r) => {
               const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
               const nums = scaleIds
                 .map((id) => Number(r.answers?.[id]))
@@ -989,6 +1001,50 @@ export default function AdminPage() {
             })}
           </tbody>
         </table>
+
+        {/* Pagination */}
+        {filteredResponses.length > PAGE_SIZE && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+            <p className="text-xs text-slate-500">
+              แสดง {safePage * PAGE_SIZE + 1}–
+              {Math.min((safePage + 1) * PAGE_SIZE, filteredResponses.length)} จาก{" "}
+              {filteredResponses.length} รายการ
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← ก่อนหน้า
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i).map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setPage(i)}
+                  className={[
+                    "h-8 w-8 rounded-lg text-sm font-medium transition",
+                    i === safePage
+                      ? "bg-blue-900 text-white"
+                      : "border border-slate-300 bg-white text-slate-700 hover:border-blue-400",
+                  ].join(" ")}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage === totalPages - 1}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ถัดไป →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
