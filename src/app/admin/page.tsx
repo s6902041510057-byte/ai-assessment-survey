@@ -922,6 +922,16 @@ export default function AdminPage() {
         <div className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-slate-800">
             📝 สรุปผลการประเมิน (โดย AI)
+            {globalRoomFilter !== "all" && (
+              <span className="ml-2 text-sm font-normal text-blue-600">
+                — {globalRoomFilter}
+              </span>
+            )}
+            {globalRoomFilter === "all" && (
+              <span className="ml-2 text-sm font-normal text-slate-500">
+                — ภาพรวมทั้งหมด
+              </span>
+            )}
           </h2>
           <div className="space-y-3 text-sm leading-relaxed text-slate-700">
             {(() => {
@@ -1171,11 +1181,11 @@ export default function AdminPage() {
                 );
               }
 
-              // Per-room summary (if multiple rooms)
+              // Per-room summary (if multiple rooms) — show only when viewing "all"
               const rooms = Array.from(
-                new Set(filteredResponses.map((r) => r.grade_level || "(ไม่ระบุ)")),
+                new Set(responses.map((r) => r.grade_level || "(ไม่ระบุ)")),
               ).sort();
-              if (rooms.length > 1) {
+              if (globalRoomFilter === "all" && rooms.length > 1) {
                 lines.push("");
                 lines.push("📋 สรุปตามห้อง:");
                 for (const room of rooms) {
