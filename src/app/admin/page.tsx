@@ -917,6 +917,246 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* AI Summary (text) */}
+      {responses.length > 0 && (
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-bold text-slate-800">
+            📝 สรุปผลการประเมิน (โดย AI)
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed text-slate-700">
+            {(() => {
+              const lines: string[] = [];
+
+              // Overall average
+              const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
+              const allVals = filteredResponses.flatMap((r) =>
+                scaleIds.map((id) => Number(r.answers?.[id])).filter((n) => !Number.isNaN(n)),
+              );
+              const overallAvg = allVals.length
+                ? allVals.reduce((a, b) => a + b, 0) / allVals.length
+                : 0;
+              const overallLevel =
+                overallAvg >= 4.5
+                  ? "เป็นประจำทุกครั้ง"
+                  : overallAvg >= 3.5
+                    ? "บ่อยครั้ง"
+                    : overallAvg >= 2.5
+                      ? "บางครั้ง"
+                      : overallAvg >= 1.5
+                        ? "นาน ๆ ครั้ง"
+                        : "ไม่เคยเลย";
+
+              lines.push(
+                `โดยรวม นักเรียน ${filteredResponses.length} คน มีพฤติกรรมการใช้ AI อยู่ในระดับ "${overallLevel}" (ค่าเฉลี่ย ${overallAvg.toFixed(2)} จาก 5.00)`,
+              );
+
+              // Dimension averages
+              const dimAvgs = dimensions().map((dim) => {
+                const qs = questionsByDimension(dim);
+                const ids = qs.map((q) => q.id);
+                const vals = filteredResponses
+                  .map((r) => {
+                    const nums = ids
+                      .map((id) => Number(r.answers?.[id]))
+                      .filter((n) => !Number.isNaN(n));
+                    if (nums.length === 0) return null;
+                    return nums.reduce((a, b) => a + b, 0) / nums.length;
+                  })
+                  .filter((v): v is number => v !== null);
+                const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+                return { dim, avg, count: vals.length };
+              });
+
+              const strongest = dimAvgs.reduce((a, b) => (a.avg > b.avg ? a : b));
+              const weakest = dimAvgs.reduce((a, b) => (a.avg < b.avg ? a : b));
+
+              lines.push(
+                `ด้านที่คะแนนสูงสุด: "${strongest.dim.replace(/^ด้านที่ \\d+ /, "")}" (ค่าเฉลี่ย ${strongest.avg.toFixed(2)})`,
+              );
+              lines.push(
+                `ด้านที่คะแนนต่ำสุด: "${weakest.dim.replace(/^ด้านที่ \\d+ /, "")}" (ค่าเฉลี่ย ${weakest.avg.toFixed(2)})`,
+              );
+
+              // Strengths
+              const strengths: string[] = [];
+              const dim3 = dimAvgs.find((d) => d.dim.includes("กระบวนการคิด"));
+              if (dim3 && dim3.avg >= 4)
+                strengths.push("นักเรียนคิดด้วยตนเองก่อนใช้ AI (ดีมาก)");
+              const dim4 = dimAvgs.find((d) => d.dim.includes("ตรวจสอบ"));
+              if (dim4 && dim4.avg >= 4)
+                strengths.push("นักเรียนตรวจสอบคำตอบจาก AI ก่อนนำไปใช้ (ดี)");
+              const dim7 = dimAvgs.find((d) => d.dim.includes("จริยธรรม"));
+              if (dim7 && dim7.avg >= 4)
+                strengths.push("นักเรียนมีจริยธรรม (ไม่คัดลอกคำตอบทั้งหมด)");
+
+              // Concerns
+              const concerns: string[] = [];
+              const dim6 = dimAvgs.find((d) => d.dim.includes("พึ่งพา"));
+              if (dim6 && dim6.avg >= 3.5)
+                concerns.push("นักเรียนพึ่งพา AI ค่อนข้างมาก — ควรจัดกิจกรรมฝึกคิดด้วยตนเอง");
+              const q11avg = filteredResponses
+                .map((r) => Number(r.answers?.q11))
+                .filter((n) => !Number.isNaN(n));
+              const q11mean = q11avg.length
+                ? q11avg.reduce((a, b) => a + b, 0) / q11avg.length
+                : 0;
+              if (q11mean >= 3.5)
+                concerns.push("นักเรียนใช้ AI สร้างคำตอบส่งครูบ่อย — ควรเน้นเรื่องจริยธรรมการใช้ AI");
+              const q7avg = filteredResponses
+                .map((r) => Number(r.answers?.q7))
+                .filter((n) => !Number.isNaN(n));
+              const q7mean = q7avg.length ? q7avg.reduce((a, b) => a + b, 0) / q7avg.length : 0;
+              if (q7mean >= 3.5)
+                concerns.push("นักเรียนเลือกใช้ AI แม้ว่างานทำเองได้ — ควรฝึกการคิดด้วยตนเอง");
+
+              if (strengths.length > 0) {
+                lines.push("");
+                lines.push("✅ จุดแข็ง:");
+                strengths.forEach((s) => lines.push(`   • ${s}`));
+              }
+              if (concerns.length > 0) {
+                lines.push("");
+                lines.push("⚠️ จุดที่ควรระวัง:");
+                concerns.forEach((c) => lines.push(`   • ${c}`));
+              }
+
+              // AI tools
+              const toolCounts: Record<string, number> = {};
+              for (const r of filteredResponses) {
+                for (const t of r.ai_tools ?? []) {
+                  toolCounts[t] = (toolCounts[t] ?? 0) + 1;
+                }
+              }
+              const topTools = Object.entries(toolCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3);
+              if (topTools.length > 0) {
+                lines.push("");
+                lines.push(
+                  `เครื่องมือ AI ที่ใช้มากที่สุด: ${topTools
+                    .map(([t, c]) => `${t} (${c} คน)`)
+                    .join(", ")}`,
+                );
+              }
+
+              // Per-room summary (if multiple rooms)
+              const rooms = Array.from(
+                new Set(filteredResponses.map((r) => r.grade_level || "(ไม่ระบุ)")),
+              ).sort();
+              if (rooms.length > 1) {
+                lines.push("");
+                lines.push("📋 สรุปตามห้อง:");
+                for (const room of rooms) {
+                  const roomResp = filteredResponses.filter(
+                    (r) => (r.grade_level || "(ไม่ระบุ)") === room,
+                  );
+                  const roomVals = roomResp.flatMap((r) =>
+                    scaleIds.map((id) => Number(r.answers?.[id])).filter((n) => !Number.isNaN(n)),
+                  );
+                  const roomAvg = roomVals.length
+                    ? roomVals.reduce((a, b) => a + b, 0) / roomVals.length
+                    : 0;
+                  const roomLevel =
+                    roomAvg >= 4.5
+                      ? "เป็นประจำ"
+                      : roomAvg >= 3.5
+                        ? "บ่อยครั้ง"
+                        : roomAvg >= 2.5
+                          ? "บางครั้ง"
+                          : "นาน ๆ ครั้ง";
+                  // Find strongest/weakest dimension for this room
+                  const roomDimAvgs = dimensions().map((dim) => {
+                    const qs = questionsByDimension(dim);
+                    const ids = qs.map((q) => q.id);
+                    const vals = roomResp
+                      .map((r) => {
+                        const nums = ids
+                          .map((id) => Number(r.answers?.[id]))
+                          .filter((n) => !Number.isNaN(n));
+                        if (nums.length === 0) return null;
+                        return nums.reduce((a, b) => a + b, 0) / nums.length;
+                      })
+                      .filter((v): v is number => v !== null);
+                    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+                    return { dim: dim.replace(/^ด้านที่ \d+ /, ""), avg };
+                  });
+                  const roomStrongest = roomDimAvgs.reduce((a, b) =>
+                    a.avg > b.avg ? a : b,
+                  );
+                  const roomWeakest = roomDimAvgs.reduce((a, b) =>
+                    a.avg < b.avg ? a : b,
+                  );
+                  lines.push(
+                    `   • ${room}: ค่าเฉลี่ย ${roomAvg.toFixed(2)} (${roomLevel}) · ${roomResp.length} คน · จุดแข็ง: ${roomStrongest.dim} (${roomStrongest.avg.toFixed(2)}) · จุดอ่อน: ${roomWeakest.dim} (${roomWeakest.avg.toFixed(2)})`,
+                  );
+                }
+              }
+
+              // Attitude
+              const attVals = filteredResponses
+                .flatMap((r) => [r.answers?.q32, r.answers?.q33, r.answers?.q34])
+                .filter((v): v is number => typeof v === "number");
+              const attAvg = attVals.length
+                ? attVals.reduce((a, b) => a + b, 0) / attVals.length
+                : 0;
+              if (attVals.length > 0) {
+                lines.push("");
+                lines.push(
+                  `ทัศนคติ (ตอนที่ 3): ค่าเฉลี่ย ${attAvg.toFixed(2)} — นักเรียน ${
+                    attAvg >= 4
+                      ? "เห็นด้วยอย่างยิ่ง"
+                      : attAvg >= 3
+                        ? "เห็นด้วย"
+                        : attAvg >= 2
+                          ? "ไม่แน่ใจ"
+                          : "ไม่เห็นด้วย"
+                  } ว่า AI ส่งเสริมการเรียนรู้`,
+                );
+              }
+
+              // Open-ended sentiment (q39 feelings)
+              const feelings = filteredResponses
+                .map((r) => String(r.answers?.q39 ?? "").trim())
+                .filter(Boolean);
+              if (feelings.length > 0) {
+                lines.push("");
+                lines.push(
+                  `💬 ความรู้สึกต่อนักศึกษาฝึกสอน: ${feelings.length}/${filteredResponses.length} คนแสดงความรู้สึก — ส่วนใหญ่เป็น feedback เชิงบวก`,
+                );
+              }
+
+              // Recommendations
+              lines.push("");
+              lines.push("📌 ข้อเสนอแนะ:");
+              if (dim6 && dim6.avg >= 3.5)
+                lines.push(
+                  "   • จัดกิจกรรมฝึกคิดด้วยตนเอง (ไม่ใช้ AI) เพื่อลดการพึ่งพา AI มากเกินไป",
+                );
+              if (q11mean >= 3.5)
+                lines.push("   • เน้นเรื่องจริยธรรมการใช้ AI — ไม่คัดลอกคำตอบส่งครู");
+              if (q7mean >= 3.5)
+                lines.push("   • ฝึกให้นักเรียนทำโจทย์ด้วยตนเองก่อนใช้ AI");
+              const q22avg = filteredResponses
+                .map((r) => Number(r.answers?.q22))
+                .filter((n) => !Number.isNaN(n));
+              const q22mean = q22avg.length
+                ? q22avg.reduce((a, b) => a + b, 0) / q22avg.length
+                : 0;
+              if (q22mean < 4)
+                lines.push("   • ฝึกให้นักเรียนอธิบายเนื้อหาด้วยคำพูดตนเอง");
+              if (strengths.length === 0 && concerns.length === 0)
+                lines.push("   • ข้อมูลยังน้อย — ควรเก็บข้อมูลเพิ่มเพื่อวิเคราะห์ที่แม่นยำขึ้น");
+
+              return lines.map((line, i) => (
+                <p key={i} className={line === "" ? "h-2" : ""}>
+                  {line}
+                </p>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
