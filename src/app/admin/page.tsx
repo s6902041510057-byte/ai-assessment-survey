@@ -150,6 +150,16 @@ export default function AdminPage() {
       ? responses
       : responses.filter((r) => (r.grade_level || "(ไม่ระบุ)") === globalRoomFilter);
 
+  // Reverse scoring สำหรับ q28 (สามารถทำงานได้แม้ไม่มี AI ช่วย)
+  // คะแนนจริง: สูง = ทำได้ (ดี) → กลับเป็น: สูง = พึ่งพา AI (ไม่ดี)
+  // เพื่อให้ทุกข้อในด้านที่ 6 เป็นทิศทางเดียวกัน (สูง = พึ่งพา AI มาก)
+  const scoredValue = (qid: string, raw: unknown): number => {
+    const n = Number(raw);
+    if (Number.isNaN(n)) return NaN;
+    if (qid === "q28") return 6 - n;
+    return n;
+  };
+
   const totalPages = Math.max(1, Math.ceil(filteredResponses.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const paginatedResponses = filteredResponses.slice(
@@ -350,7 +360,7 @@ export default function AdminPage() {
     const values = filteredResponses
       .map((r) => {
         const nums = ids
-          .map((id) => Number(r.answers?.[id]))
+          .map((id) => scoredValue(id, r.answers?.[id]))
           .filter((n) => !Number.isNaN(n));
         if (nums.length === 0) return null;
         return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -401,7 +411,7 @@ export default function AdminPage() {
     const vals = rs
       .map((r) => {
         const nums = scaleIds
-          .map((id) => Number(r.answers?.[id]))
+          .map((id) => scoredValue(id, r.answers?.[id]))
           .filter((n) => !Number.isNaN(n));
         if (nums.length === 0) return null;
         return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -835,7 +845,7 @@ export default function AdminPage() {
                       const vals = rs
                         .map((r) => {
                           const nums = ids
-                            .map((id) => Number(r.answers?.[id]))
+                            .map((id) => scoredValue(id, r.answers?.[id]))
                             .filter((n) => !Number.isNaN(n));
                           if (nums.length === 0) return null;
                           return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -880,7 +890,7 @@ export default function AdminPage() {
                   const vals = rs
                     .map((r) => {
                       const nums = scaleIds
-                        .map((id) => Number(r.answers?.[id]))
+                        .map((id) => scoredValue(id, r.answers?.[id]))
                         .filter((n) => !Number.isNaN(n));
                       if (nums.length === 0) return null;
                       return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -940,7 +950,7 @@ export default function AdminPage() {
               // Overall average
               const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
               const allVals = filteredResponses.flatMap((r) =>
-                scaleIds.map((id) => Number(r.answers?.[id])).filter((n) => !Number.isNaN(n)),
+                scaleIds.map((id) => scoredValue(id, r.answers?.[id])).filter((n) => !Number.isNaN(n)),
               );
               const overallAvg = allVals.length
                 ? allVals.reduce((a, b) => a + b, 0) / allVals.length
@@ -967,7 +977,7 @@ export default function AdminPage() {
                 const vals = filteredResponses
                   .map((r) => {
                     const nums = ids
-                      .map((id) => Number(r.answers?.[id]))
+                      .map((id) => scoredValue(id, r.answers?.[id]))
                       .filter((n) => !Number.isNaN(n));
                     if (nums.length === 0) return null;
                     return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -1193,7 +1203,7 @@ export default function AdminPage() {
                     (r) => (r.grade_level || "(ไม่ระบุ)") === room,
                   );
                   const roomVals = roomResp.flatMap((r) =>
-                    scaleIds.map((id) => Number(r.answers?.[id])).filter((n) => !Number.isNaN(n)),
+                    scaleIds.map((id) => scoredValue(id, r.answers?.[id])).filter((n) => !Number.isNaN(n)),
                   );
                   const roomAvg = roomVals.length
                     ? roomVals.reduce((a, b) => a + b, 0) / roomVals.length
@@ -1213,7 +1223,7 @@ export default function AdminPage() {
                     const vals = roomResp
                       .map((r) => {
                         const nums = ids
-                          .map((id) => Number(r.answers?.[id]))
+                          .map((id) => scoredValue(id, r.answers?.[id]))
                           .filter((n) => !Number.isNaN(n));
                         if (nums.length === 0) return null;
                         return nums.reduce((a, b) => a + b, 0) / nums.length;
@@ -1349,7 +1359,7 @@ export default function AdminPage() {
             {paginatedResponses.map((r) => {
               const scaleIds = questions.filter((q) => q.type === "scale").map((q) => q.id);
               const nums = scaleIds
-                .map((id) => Number(r.answers?.[id]))
+                .map((id) => scoredValue(id, r.answers?.[id]))
                 .filter((n) => !Number.isNaN(n));
               const avg = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : "-";
               return (
