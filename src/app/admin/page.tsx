@@ -1049,7 +1049,42 @@ export default function AdminPage() {
                 lines.push(`   • ${interpret(d.dim, d.avg)}`);
               });
 
-              // Strengths
+              // จุดแข็ง/จุดอ่อน รายด้าน (ทุกด้าน)
+              lines.push("");
+              lines.push("📋 จุดแข็ง/จุดอ่อน รายด้าน:");
+              dimAvgs.forEach((d) => {
+                const name = d.dim.replace(/^ด้านที่ \\d+ /, "");
+                const isDependence = d.dim.includes("พึ่งพา");
+                const isReverse = isDependence; // ด้านที่ 6: สูง = ควรระวัง
+                let status: string;
+                let icon: string;
+                if (isReverse) {
+                  if (d.avg >= 4) {
+                    status = "ควรระวัง (พึ่งพา AI มาก)";
+                    icon = "⚠️";
+                  } else if (d.avg >= 3) {
+                    status = "ระดับปานกลาง";
+                    icon = "🟡";
+                  } else {
+                    status = "ดี (ไม่พึ่งพา AI มาก)";
+                    icon = "✅";
+                  }
+                } else {
+                  if (d.avg >= 4) {
+                    status = "ดี";
+                    icon = "✅";
+                  } else if (d.avg >= 3) {
+                    status = "ปานกลาง";
+                    icon = "🟡";
+                  } else {
+                    status = "ควรพัฒนา";
+                    icon = "⚠️";
+                  }
+                }
+                lines.push(`   ${icon} ${name}: ${d.avg.toFixed(2)} — ${status}`);
+              });
+
+              // Strengths (detailed)
               const strengths: string[] = [];
               const dim3 = dimAvgs.find((d) => d.dim.includes("กระบวนการคิด"));
               if (dim3 && dim3.avg >= 4)
@@ -1060,8 +1095,14 @@ export default function AdminPage() {
               const dim7 = dimAvgs.find((d) => d.dim.includes("จริยธรรม"));
               if (dim7 && dim7.avg >= 4)
                 strengths.push("นักเรียนมีจริยธรรม (ไม่คัดลอกคำตอบทั้งหมด)");
+              const dim5 = dimAvgs.find((d) => d.dim.includes("การเรียนรู้"));
+              if (dim5 && dim5.avg >= 4)
+                strengths.push("AI ส่งเสริมการเรียนรู้ (นักเรียนเข้าใจเนื้อหามากขึ้น)");
+              const dim1 = dimAvgs.find((d) => d.dim.includes("พฤติกรรมและความถี่"));
+              if (dim1 && dim1.avg >= 3.5 && dim1.avg <= 4.5)
+                strengths.push("นักเรียนใช้ AI บ่อยครั้ง (ไม่มากเกินไป)");
 
-              // Concerns
+              // Concerns (detailed)
               const concerns: string[] = [];
               const dim6 = dimAvgs.find((d) => d.dim.includes("พึ่งพา"));
               if (dim6 && dim6.avg >= 3.5)
@@ -1080,6 +1121,22 @@ export default function AdminPage() {
               const q7mean = q7avg.length ? q7avg.reduce((a, b) => a + b, 0) / q7avg.length : 0;
               if (q7mean >= 3.5)
                 concerns.push("นักเรียนเลือกใช้ AI แม้ว่างานทำเองได้ — ควรฝึกการคิดด้วยตนเอง");
+              const q22avg = filteredResponses
+                .map((r) => Number(r.answers?.q22))
+                .filter((n) => !Number.isNaN(n));
+              const q22mean = q22avg.length
+                ? q22avg.reduce((a, b) => a + b, 0) / q22avg.length
+                : 0;
+              if (q22mean < 4)
+                concerns.push("นักเรียนอธิบายเนื้อหาด้วยคำพูดตนเองได้ไม่ดีนัก — ควรพัฒนา");
+              const q28avg = filteredResponses
+                .map((r) => Number(r.answers?.q28))
+                .filter((n) => !Number.isNaN(n));
+              const q28mean = q28avg.length
+                ? q28avg.reduce((a, b) => a + b, 0) / q28avg.length
+                : 0;
+              if (q28mean < 3.5)
+                concerns.push("นักเรียนทำงานได้ด้วยตนเอง (แม้ไม่มี AI) ระดับปานกลาง — ควรฝึกเพิ่ม");
 
               if (strengths.length > 0) {
                 lines.push("");
@@ -1091,6 +1148,9 @@ export default function AdminPage() {
                 lines.push("⚠️ จุดที่ควรระวัง:");
                 concerns.forEach((c) => lines.push(`   • ${c}`));
               }
+              if (strengths.length === 0 && concerns.length === 0)
+                lines.push("");
+                lines.push("   (ข้อมูลยังน้อย — ควรเก็บข้อมูลเพิ่มเพื่อวิเคราะห์ที่แม่นยำขึ้น)");
 
               // AI tools
               const toolCounts: Record<string, number> = {};
@@ -1227,12 +1287,6 @@ export default function AdminPage() {
                 lines.push("   • เน้นเรื่องจริยธรรมการใช้ AI — ไม่คัดลอกคำตอบส่งครู");
               if (q7mean >= 3.5)
                 lines.push("   • ฝึกให้นักเรียนทำโจทย์ด้วยตนเองก่อนใช้ AI");
-              const q22avg = filteredResponses
-                .map((r) => Number(r.answers?.q22))
-                .filter((n) => !Number.isNaN(n));
-              const q22mean = q22avg.length
-                ? q22avg.reduce((a, b) => a + b, 0) / q22avg.length
-                : 0;
               if (q22mean < 4)
                 lines.push("   • ฝึกให้นักเรียนอธิบายเนื้อหาด้วยคำพูดตนเอง");
               if (strengths.length === 0 && concerns.length === 0)
