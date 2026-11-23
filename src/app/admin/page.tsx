@@ -977,6 +977,78 @@ export default function AdminPage() {
                 `ด้านที่คะแนนต่ำสุด: "${weakest.dim.replace(/^ด้านที่ \\d+ /, "")}" (ค่าเฉลี่ย ${weakest.avg.toFixed(2)})`,
               );
 
+              // แสดงค่าเฉลี่ยของทุกด้าน
+              lines.push("");
+              lines.push("📊 ค่าเฉลี่ยตามด้าน (ภาพรวม):");
+              dimAvgs.forEach((d) => {
+                const name = d.dim.replace(/^ด้านที่ \\d+ /, "");
+                lines.push(`   • ${name}: ${d.avg.toFixed(2)}`);
+              });
+
+              // ตีความค่าเฉลี่ยของแต่ละด้าน (plain language)
+              lines.push("");
+              lines.push("💡 ตีความค่าเฉลี่ย:");
+              const interpret = (dim: string, avg: number): string => {
+                const name = dim.replace(/^ด้านที่ \\d+ /, "");
+                const level =
+                  avg >= 4.5
+                    ? "เป็นประจำทุกครั้ง"
+                    : avg >= 3.5
+                      ? "บ่อยครั้ง"
+                      : avg >= 2.5
+                        ? "บางครั้ง"
+                        : avg >= 1.5
+                          ? "นาน ๆ ครั้ง"
+                          : "ไม่เคยเลย";
+                const attitudeLevel =
+                  avg >= 4.5
+                    ? "เห็นด้วยอย่างยิ่ง"
+                    : avg >= 3.5
+                      ? "เห็นด้วย"
+                      : avg >= 2.5
+                        ? "ไม่แน่ใจ"
+                        : avg >= 1.5
+                          ? "ไม่เห็นด้วย"
+                          : "ไม่เห็นด้วยอย่างยิ่ง";
+                const isAttitude = dim.includes("ทัศนคติ");
+                const lvl = isAttitude ? attitudeLevel : level;
+
+                if (dim.includes("พึ่งพา")) {
+                  // ด้านที่ 6: สูง = ควรระวัง, ต่ำ = ดี
+                  if (avg >= 4) return `${name}: นักเรียน "พึ่งพา AI มาก" — ควรจัดกิจกรรมฝึกคิดด้วยตนเอง`;
+                  if (avg >= 3) return `${name}: นักเรียน "พึ่งพา AI ระดับปานกลาง" — ควรระวัง`;
+                  return `${name}: นักเรียน "ทำงานได้ด้วยตนเอง" — ดี`;
+                }
+                if (dim.includes("จริยธรรม")) {
+                  if (avg >= 4) return `${name}: นักเรียน "มีจริยธรรม" — ไม่คัดลอกทั้งหมด (ดี)`;
+                  if (avg >= 3) return `${name}: นักเรียน "มีจริยธรรมระดับปานกลาง"`;
+                  return `${name}: นักเรียน "อาจคัดลอก" — ควรเน้นเรื่องจริยธรรม`;
+                }
+                if (dim.includes("กระบวนการคิด")) {
+                  if (avg >= 4) return `${name}: นักเรียน "คิดก่อนใช้ AI" — ดีมาก`;
+                  if (avg >= 3) return `${name}: นักเรียน "คิดก่อนใช้ AI บางครั้ง"`;
+                  return `${name}: นักเรียน "ข้ามขั้นตอนคิด" — ควรระวัง`;
+                }
+                if (dim.includes("ตรวจสอบ")) {
+                  if (avg >= 4) return `${name}: นักเรียน "ตรวจสอบก่อนใช้" — ดี`;
+                  if (avg >= 3) return `${name}: นักเรียน "ตรวจสอบบางครั้ง"`;
+                  return `${name}: นักเรียน "เชื่อ AI ทันที" — ควรระวัง`;
+                }
+                if (dim.includes("การเรียนรู้")) {
+                  if (avg >= 4) return `${name}: "AI ส่งเสริมการเรียนรู้" — ดี`;
+                  if (avg >= 3) return `${name}: "AI ส่งเสริมการเรียนรู้ บางส่วน"`;
+                  return `${name}: "AI ไม่ได้ช่วยให้เรียนรู้" — ควรปรับ`;
+                }
+                if (isAttitude) {
+                  return `${name}: นักเรียน "${lvl}" ว่า AI ส่งเสริมการเรียนรู้`;
+                }
+                // default (behavior dimensions)
+                return `${name}: นักเรียนใช้ AI "${lvl}"`;
+              };
+              dimAvgs.forEach((d) => {
+                lines.push(`   • ${interpret(d.dim, d.avg)}`);
+              });
+
               // Strengths
               const strengths: string[] = [];
               const dim3 = dimAvgs.find((d) => d.dim.includes("กระบวนการคิด"));
@@ -1087,8 +1159,27 @@ export default function AdminPage() {
                     a.avg < b.avg ? a : b,
                   );
                   lines.push(
-                    `   • ${room}: ค่าเฉลี่ย ${roomAvg.toFixed(2)} (${roomLevel}) · ${roomResp.length} คน · จุดแข็ง: ${roomStrongest.dim} (${roomStrongest.avg.toFixed(2)}) · จุดอ่อน: ${roomWeakest.dim} (${roomWeakest.avg.toFixed(2)})`,
+                    `   • ${room}: ค่าเฉลี่ย ${roomAvg.toFixed(2)} (${roomLevel}) · ${roomResp.length} คน`,
                   );
+                  lines.push(
+                    `     จุดแข็ง: ${roomStrongest.dim} (${roomStrongest.avg.toFixed(2)}) · จุดอ่อน: ${roomWeakest.dim} (${roomWeakest.avg.toFixed(2)})`,
+                  );
+                  lines.push("     ค่าเฉลี่ยตามด้าน:");
+                  roomDimAvgs.forEach((d) => {
+                    lines.push(`       - ${d.dim}: ${d.avg.toFixed(2)}`);
+                  });
+                  lines.push("     ตีความ:");
+                  roomDimAvgs.forEach((d) => {
+                    const lvl =
+                      d.avg >= 4.5
+                        ? "เป็นประจำ"
+                        : d.avg >= 3.5
+                          ? "บ่อยครั้ง"
+                          : d.avg >= 2.5
+                            ? "บางครั้ง"
+                            : "นาน ๆ ครั้ง";
+                    lines.push(`       - ${d.dim}: ${lvl}`);
+                  });
                 }
               }
 
